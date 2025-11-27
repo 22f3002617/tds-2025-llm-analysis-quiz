@@ -1,0 +1,20 @@
+[project]
+name = "tds-2025-llm-analysis-quiz"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp>=3.13.2",
+    "fastapi[standard]>=0.121.2",
+    "google-genai>=1.50.1",
+    "openai>=2.8.0",
+    "playwright>=1.56.0",
+    "pydantic-settings>=2.12.0",
+    "python-dotenv>=1.2.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.1",
+]
