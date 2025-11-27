@@ -238,7 +238,7 @@ class LLMAgent:
 
 async def main():
     from llm_providers import OpenAIProvider
-    from config import config
+    import config
     from setup_logger import setup as logger_setup
 
     logger_setup()
@@ -249,7 +249,7 @@ async def main():
         base_url=config.OPENAI_BASE_URL,
     )
 
-    from others.tools import tools_registry
+    from tools import tools_registry
 
     agent = LLMAgent(
         provider=llm_provider,

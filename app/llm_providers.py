@@ -1,6 +1,13 @@
 import abc
+import json
 from typing import override, Any, Literal
 
+import config
+
+import logging
+from setup_logger import setup as setup_logger
+
+logger = logging.getLogger(__name__)
 
 class LLMProvider(abc.ABC):
     def __init__(self, name):
@@ -37,10 +44,27 @@ class OpenAIProvider(LLMProvider):
             kwargs["tool_choice"] = tool_choice
 
         resp = self.client.chat.completions.create(**kwargs)
-
+        logger.info("(%s) Number of tokens burned: %s (detailed %s)", self.name, resp.usage.total_tokens, json.dumps(resp.usage.to_dict()))
         choice = resp.choices[0].message
         return {
             "raw": resp,
             "message": choice,
             "tool_calls": getattr(choice, "tool_calls", None),
         }
+
+def main():
+    setup_logger()
+
+    provider = OpenAIProvider(
+        model=config.OPENAI_MODEL_NAME,
+        api_key=config.OPENAI_API_KEY,
+        base_url=config.OPENAI_BASE_URL
+    )
+
+    response = provider.chat(messages=[
+        {"role": "user", "content": "Hello, world!"}
+    ])
+    print(response)
+
+if __name__ == "__main__":
+    main()
