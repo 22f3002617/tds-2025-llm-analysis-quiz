@@ -11,7 +11,7 @@ from openai.types.chat import ChatCompletionMessage
 import config
 from llm_providers import LLMProvider
 from scraper import ScrapedDetails
-from tools_registry import ToolRegistry
+from tools_registry import ToolsRegistry
 
 
 logger = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ class LLMAgent:
     def __init__(
             self,
             provider: LLMProvider,
-            tools_registry: ToolRegistry,
+            tools_registry: ToolsRegistry,
             timeout_ms: int,
             agent_logs_dir: Path
     ):
@@ -165,6 +165,7 @@ class LLMAgent:
                 tools=self.tools.to_dict(self.provider.name),
                 tool_choice="auto",
             )
+            agent_logger.log(f"({self.provider.name}) Number of tokens burned: {resp["raw"].usage.total_tokens} (detailed {json.dumps(resp["raw"].usage.to_dict())})")
             msg: ChatCompletionMessage = resp["message"]
             tool_calls = resp["tool_calls"]
 
@@ -176,7 +177,18 @@ class LLMAgent:
                 agent_logger.log(f"No tools call, so will break the loop with message: {msg}")
                 break
 
+            # summarize_response = self.provider.chat(
+            #     messages + [{
+            #         "role": "user", "content": "summarise the conversation so far in brief before next tool call, have essential details next conversation going to relay on this only"
+            #     }]
+            # )
+
+            # use summarise reponse instead of the full message list
+            # messages = [{"role": "system", "content": self.system_prompt}, summarize_response["message"]]
+            # agent_logger.log(f"summarized messages for next tool call: {messages}")
+
             # 2. Execute tool calls
+            # messages with role 'tool' must be a response to a preceding message with 'tool_calls'."
             messages.append(
                 {
                     "role": "assistant",
@@ -193,7 +205,7 @@ class LLMAgent:
                 args_json = tc.function.arguments
                 args = json.loads(args_json) if isinstance(args_json, str) else args_json
                 result = await self.tools.call_async(tool_name, agent_logger=agent_logger, **args)
-
+                agent_logger.log(f"LLM call result: {result}")
                 # Normalize to string for the tool message
                 content = result if isinstance(result, str) else json.dumps(result)
 
@@ -204,18 +216,26 @@ class LLMAgent:
                         if isinstance(result_json, dict) and result_json.get("correct") is True:
                             agent_logger.log("Answer submitted correctly.")
                             if "url" in result_json:
-                                messages = [
-                                    {"role": "system", "content": self.system_prompt},
-                                    {"role": "user", "content": f'Next quiz {result_json["url"]}'},
-                                ]
+                                # messages = [
+                                #     {"role": "system", "content": self.system_prompt},
+                                #     {"role": "user", "content": },
+                                # ]
                                 agent_logger.log(f"have next quiz {result_json['url']}, resetting messages for next quiz. messages {messages}")
-                                continue
+                                await self.ask(f'Next quiz {result_json["url"]}')
+                                break
                             else:
                                 agent_logger.log("No more quizzes, finishing the agent loop.")
                                 agent_logger.log(f"final info messages: {messages}, tool_results: {tool_results}, llm response: {msg}, tool calls: {tool_calls}")
                                 return messages
                         else:
                             agent_logger.log("Answer submitted incorrectly, continuing the agent loop.")
+                            # summarise the context and start with fresh think because it failure
+                            messages = [
+                                {"role": "system", "content": self.system_prompt},
+                                {"role": "user", "content": user_input},
+                                {"role": "assistant", "content": self.provider.chat(messages=messages+[{"role": "user", "content": "Provide summary of the conversation so far in brief, focusing on essential details for the next tool call."}])["messages"].conent},
+                                {"role": "assistant", "content": "Previous answer was incorrect, re-evaluating."}
+                            ]
                     except Exception as e:
                         agent_logger.log(f"Error parsing submit_answer result: {str(e)}")
 
@@ -259,6 +279,8 @@ async def main():
     )
     request_id = f"demo_{len(list(config.AGENT_LOG_BASE_PATH.iterdir()))}"
     response = await agent.ask("https://tds-llm-analysis.s-anand.net/demo", request_id=request_id)
+    # response = await agent.ask("https://tds-llm-analysis.s-anand.net/demo-audio?email=your+email&id=12059", request_id=request_id)
+    # response = await agent.ask("https://tds-llm-analysis.s-anand.net/demo2?email=ananthavel.s@gmail.com", request_id=request_id)
     print(response)
 
 

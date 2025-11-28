@@ -7,17 +7,17 @@ import aiohttp
 
 from agent import AgentLogger
 import config
-from tools_registry import ToolRegistry
+from tools_registry import ToolsRegistry
 from scraper import ScraperFactory, ScrapedDetails
 import base64
 
-tools_registry = ToolRegistry()
+tools_registry = ToolsRegistry()
 
 logger = logging.getLogger(__name__)
 
 @tools_registry.register(
     name="browser",
-    description="Scrape content from a given URL. Using playwright, useful when javascript based rendering is needed.",
+    description="Scrape content from a given URL. Using playwright, useful when javascript based rendering is needed. to execute javascript also you can use this.",
     parameters={
         "type": "object",
         "properties": {
@@ -95,15 +95,14 @@ def prepare_answer(answer: str, kind: Kind) -> bool | float | str | dict:
             },
             "email": {
                 "type": "string",
-                "description": "Email id mentioned quiz page for quiz submission url, (default: from config).",
+                "description": "Email id mentioned quiz page for quiz submission url, (default: None).",
             },
             "secret": {
                 "type": "string",
                 "description": "The secret token to authenticate the submission url from the quiz page, (default: None).",
             }
         },
-        "required": ["submission_url", "answer", "kind", "quiz_url"],
-        # "required": ["submission_url", "quiz_url"],
+        "required": ["submission_url", "answer", "kind", "quiz_url"]
     },
 )
 async def sent_answer(submission_url: str, answer: str, kind: Kind, quiz_url: str,
@@ -184,7 +183,7 @@ async def download_file(file_name: str, file_url: str, agent_logger: AgentLogger
                 "description": "The Python script to execute.",
             },
         },
-        "required": ["script"],
+        "required": ["script", "script_name"],
     },
 )
 async def execute_python(script_name: str, script: str, agent_logger: AgentLogger|None=None) -> str:

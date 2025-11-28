@@ -1,11 +1,16 @@
 import abc
 import asyncio
+import base64
+import dataclasses
 import logging
 import os
 from datetime import datetime
 from pathlib import Path
 from typing import override, TypedDict
 
+from openai.types.responses import ResponseCustomToolCallOutputParam, ResponseInputImageParam, ResponseInputTextParam, \
+    ResponseInputFileParam
+from openai.types.responses.response_custom_tool_call_output_param import OutputOutputContentList
 from playwright.async_api import async_playwright
 
 from setup_logger import setup as logger_setup
@@ -13,10 +18,52 @@ import config
 
 logger = logging.getLogger(__name__)
 
-class ScrapedDetails(TypedDict):
+
+@dataclasses.dataclass(frozen=True)
+class ScrapedDetails:
+    url: str
     html_content: str
     script_result: str | None
     screenshot: bytes | None
+
+    def as_openai_response_api_input(self) -> list[OutputOutputContentList]:
+        result: list[OutputOutputContentList] = [ResponseInputFileParam(
+            type="input_file",
+            file_data=self.html_content,
+            filename="scraped_content.html",
+        )]
+        if self.script_result is not None:
+            result.append(
+                ResponseInputTextParam(
+                    type="input_text",
+                    text=self.script_result,
+                )
+            )
+        if self.screenshot is not None:
+            result.append(
+                ResponseInputImageParam(
+                    type="input_image",
+                    detail="high",
+                    image_url="data:image/png;base64," + base64.b64encode(self.screenshot).decode('utf-8'),
+                )
+            )
+
+        return result
+
+    def save(self, agent_log_dir):
+        timestamp = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+        content_path = Path(agent_log_dir) / f"scraped_content_{timestamp}.html"
+        with open(content_path, "w", encoding="utf-8") as f:
+            f.write(self.html_content)
+        if self.script_result is not None:
+            script_path = Path(agent_log_dir) / f"script_result_{timestamp}.txt"
+            with open(script_path, "w", encoding="utf-8") as f:
+                f.write(self.script_result)
+        if self.screenshot is not None:
+            screenshot_path = Path(agent_log_dir) / f"screenshot_{timestamp}.png"
+            with open(screenshot_path, "wb") as f:
+                f.write(self.screenshot)
+
 
 class Scraper(abc.ABC):
     def __init__(self, agent_path: Path,
@@ -120,7 +167,8 @@ class PlaywrightScraper(Scraper):
 
             content = await page.content()
             # await self.save_content(url, content, request_id)
-        return ScrapedDetails(html_content=content, script_result=script_result if script else None, screenshot=screenshot_bytes if screenshot_required else None)
+        return ScrapedDetails(url=url, html_content=content, script_result=script_result if script else None,
+                              screenshot=screenshot_bytes if screenshot_required else None)
         # return content, script_result if script else None, screenshot_bytes if screenshot_required else None
 
 
@@ -151,6 +199,7 @@ async def main() -> int:
     content = await scraper.scrape(url, screenshot_required=True)
     print(content)
     return 0
+
 
 if __name__ == '__main__':
     exit(asyncio.run(main()))

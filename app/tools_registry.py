@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from openai.types.responses import CustomToolParam, ResponseCustomToolCallParam, FunctionToolParam
+
 
 @dataclass
 class Tool:
@@ -11,7 +13,7 @@ class Tool:
 
 
 @dataclass
-class ToolRegistry:
+class ToolsRegistry:
     tools: dict[str, Tool] = field(default_factory=dict)
 
     def register(
@@ -54,6 +56,19 @@ class ToolRegistry:
             for t in self.tools.values()
         ]
 
+    def as_openai_response_endpoint_tools(self) -> list[FunctionToolParam]:
+        """Convert registry to OpenAI response endpoint tools format."""
+        return [
+            FunctionToolParam(
+                type="function",
+                name=t.name,
+                description=t.description,
+                parameters=t.parameters,
+                strict=True
+            )
+            for t in self.tools.values()
+        ]
+
     def call(self, name: str, **kwargs: Any) -> Any:
         if name not in self.tools:
             raise ValueError(f"Unknown tool: {name}")
@@ -71,5 +86,7 @@ class ToolRegistry:
         match name:
             case "openai":
                 return self.as_openai_tools()
+            case "openai_response_endpoint_tools":
+                return self.as_openai_response_endpoint_tools()
             case _:
                 raise ValueError(f"Unsupported provider for tools: {name}")
