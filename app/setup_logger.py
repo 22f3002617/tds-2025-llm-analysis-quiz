@@ -1,6 +1,6 @@
 import logging
 
-import config
+from app import config
 from pathlib import Path
 
 def setup(filename: Path | None = None, level: int = logging.INFO) -> None:
