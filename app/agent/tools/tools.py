@@ -6,7 +6,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 import assemblyai as aai
-import config
+from app import config
 
 
 logger = logging.getLogger(__name__)

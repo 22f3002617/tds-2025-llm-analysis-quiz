@@ -4,10 +4,10 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel
 from starlette.responses import JSONResponse
 
-from agent.simple_agent import SimpleAgent
-import config
-from middlewares import RequestIDMiddleware
-from setup_logger import setup as setup_logging
+from .agent.simple_agent import SimpleAgent
+from . import config
+from .middlewares import RequestIDMiddleware
+from .setup_logger import setup as setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)

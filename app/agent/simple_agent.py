@@ -7,14 +7,14 @@ from time import strftime
 
 import openai
 
-import config
-import setup_logger
-from agent.agent_logger import AgentLogger
-from agent.tools.schema import _send_answer_custom_func_tool, _transcribe_audio_custom_func_tool, \
+from app import config
+from app import setup_logger
+from app.agent.agent_logger import AgentLogger
+from app.agent.tools.schema import _send_answer_custom_func_tool, _transcribe_audio_custom_func_tool, \
     _playwright_scraping_custom_func_tool, _download_file_custom_func_tool, _python_execute_code_custom_func_tool, \
     _get_local_file_custom_func_tool, _get_video_frames_custom_func_tool
 
-from agent.tools.tools import submit_answer, transcribe_audio, scrape_with_playwright, download_file, \
+from app.agent.tools.tools import submit_answer, transcribe_audio, scrape_with_playwright, download_file, \
     execute_python_in_sandbox, get_local_file, get_video_frames
 
 

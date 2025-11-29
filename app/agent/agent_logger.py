@@ -1,7 +1,7 @@
 import logging
 import os
 
-import config
+from app import config
 
 
 # this logger intended to log each agent request into a separate folder
