@@ -1,6 +1,8 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
-
+os.environ["SYSTEM_PROMPT_RESPONSE_ID"] = "resp_00fb93ee4f15a55600692ab023fb0081948d2e0507d11d8b56"
 
 @pytest.mark.usefixtures("valid_secret")
 def test_submit_quiz_invalid_secret(client: TestClient, quiz_payload):

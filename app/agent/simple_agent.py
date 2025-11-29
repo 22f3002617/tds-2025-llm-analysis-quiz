@@ -17,8 +17,8 @@ from app.agent.tools.schema import _send_answer_custom_func_tool, _transcribe_au
 from app.agent.tools.tools import submit_answer, transcribe_audio, scrape_with_playwright, download_file, \
     execute_python_in_sandbox, get_local_file, get_video_frames
 
-
 logger = logging.getLogger(__name__)
+
 
 # OpenAI response API endpoint: https://platform.openai.com/docs/api-reference/responses/create
 class SimpleAgent:
@@ -26,6 +26,7 @@ class SimpleAgent:
     def log(log_msg: str, **kwargs):
         logger.info(log_msg, **kwargs)
         print(log_msg, **kwargs)
+
     def __init__(self, system_prompt_response_id: str | None = None):
         custom_function_tools = [_send_answer_custom_func_tool,
                                  _transcribe_audio_custom_func_tool,
@@ -71,7 +72,8 @@ class SimpleAgent:
                     tools=self.tools,
                     tool_choice="none",
                     input=system_prompt_input,
-                    max_output_tokens=8192
+                    max_output_tokens=16384
+
                 )
 
                 self.system_prompt_response_id = response.id
@@ -112,7 +114,13 @@ class SimpleAgent:
                     "text": f"Error while scraping the URL {url}: {str(e)}"
                 }
             ]
-            return openai_input_content
+            return [{
+                "role": "user",
+                "content": [{
+                    "type": "input_text",
+                    "text": openai_input_content
+                }]
+            }]
 
         openai_input_content.append({
             "type": "input_text",
@@ -137,7 +145,10 @@ class SimpleAgent:
                 "image_url": self._as_base64(screenshot, "image/png")
             })
 
-        return openai_input_content
+        return [{
+            "role": "user",
+            "content": openai_input_content
+        }]
 
     def run(self, message: str = "", quiz_url: str | None = ""):
         agent_logger = AgentLogger(request_id=f"simple-agent-{strftime('%Y-%m-%dT%H:%M:%S')}")
@@ -162,7 +173,7 @@ class SimpleAgent:
 
         if quiz_url is not None:
             scraped_input_content = self._scrape(quiz_url, screenshot_required=False)
-            input_content[0]["content"].extend(scraped_input_content)
+            input_content.extend(scraped_input_content)
 
         previous_response_id = self.system_prompt_response_id
 
@@ -179,7 +190,7 @@ class SimpleAgent:
                     f"[DEBUG] Time elapsed: {time.perf_counter() - start_time:.2f} sec (remaining {quiz_time_sec - (time.perf_counter() - start_time):.2f} sec)")
                 log(f"================= OpenAI REQUEST INFO [ENDS] ===========================")
                 resp = self.client.responses.create(
-                    max_output_tokens=2048,
+                    max_output_tokens=4096,
                     previous_response_id=previous_response_id,
                     model=self.model,
                     tools=self.tools,
@@ -263,11 +274,11 @@ class SimpleAgent:
 
                                         tools_content = [{
                                             "role": "user",
-                                            "content": scraped_input_content + [{
+                                            "content": [{
                                                 "type": "input_text",
                                                 "text": f"solve the quiz from scraped content"
                                             }]
-                                        }]
+                                        }] + scraped_input_content
                                         log("[INFO] Resetting timer for next quiz.")
                                         log(
                                             f"[INFO] quiz started at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}")
@@ -350,8 +361,8 @@ class SimpleAgent:
                     log("[DEBUG] ====== Tool Function Call Info [ENDS] ==========")
             input_content += tools_content
             if time.perf_counter() - start_time > quiz_time_sec or len(tools_content) <= 0:
-                if reasoning_retry_count<2:
-                    reasoning_retry_count +=1
+                if reasoning_retry_count < 2:
+                    reasoning_retry_count += 1
                     log(f"[INFO] No tool calls made in this response, retrying reasoning step {reasoning_retry_count}/2.")
                     input_content += [{
                         "role": "user",
@@ -378,11 +389,11 @@ class SimpleAgent:
 
                     input_content = [{
                         "role": "user",
-                        "content": scraped_input_content + [{
+                        "content": [{
                             "type": "input_text",
                             "text": f"solve the quiz from scraped content"
                         }]
-                    }]
+                    }] + scraped_input_content
                     log("[INFO] Resetting timer for next quiz.")
                     log(f"[INFO] quiz started at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}")
                     start_time = time.perf_counter()

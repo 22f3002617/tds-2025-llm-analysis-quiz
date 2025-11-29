@@ -7,10 +7,11 @@ project_path: Path = Path(__file__).resolve().parent.parent
 if os.environ.get("DEV", "true").lower() == "true":
     load_dotenv(project_path / ".env")
 
-SECRET_KEY = os.getenv("SECRET_KEY")
-ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLYAI_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+SECRET_KEY = os.environ["SECRET_KEY"]
+ASSEMBLYAI_API_KEY = os.environ["ASSEMBLYAI_API_KEY"]
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+print(SECRET_KEY, ASSEMBLYAI_API_KEY, OPENAI_API_KEY)
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://aipipe.org/openai/v1")
 SYSTEM_PROMPT_RESPONSE_ID = os.getenv("SYSTEM_PROMPT_RESPONSE_ID", None)
 OPENAI_MODEL_NAME = os.getenv("OPENAI_MODEL_NAME", "gpt-5-mini")
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")

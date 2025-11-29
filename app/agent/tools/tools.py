@@ -15,13 +15,13 @@ logger = logging.getLogger(__name__)
 def scrape_with_playwright(url: str, script: str | None = None,
                            screenshot_required: bool = False,
                            headless: bool = True):
-    content, script_result, screenshot_bytes = None, None, None
+    content, script_result, screenshot_bytes = "", "", ""
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=headless)
             page = browser.new_page()
             page.goto(url)
-            content = page.content()
+            content = page.content() or ""
 
             if screenshot_required:
                 screenshot_bytes = page.screenshot()
@@ -342,7 +342,7 @@ def safe_open(path, mode="r", *args, **kwargs):
     if not is_allowed_path:
         # Final restrictive check if the initial check fails
         if not (normalized_path.startswith('./') or normalized_path.startswith(ALLOWED_PREFIX)):
-            raise PermissionError(f"Access restricted. Only paths relative to CWD or starting with '{DOWNLOAD_DIR}' are allowed.")
+            raise PermissionError(f"Access restricted. Only paths relative to CWD or starting with '{{DOWNLOAD_DIR}}' are allowed.")
 
     return _real_open(path, mode, *args, **kwargs)
 
@@ -369,9 +369,9 @@ USER_CODE = """
 {code}
 """
 # Execute user code with a custom, restricted namespace.
-# By passing only {'__builtins__': builtins}, we prevent the user code
+# By passing only {{'__builtins__': builtins}}, we prevent the user code
 # from accessing 'os', 'sys', 'importlib', etc., which are in the wrapper's scope.
-exec(USER_CODE, {'__builtins__': builtins})
+exec(USER_CODE, {{'__builtins__': builtins}})
 '''
 
 
@@ -424,7 +424,7 @@ def execute_python_in_sandbox(file_name: str, code: str) -> Dict[str, Any]:
         # 3. Execute inside sandbox only
         # ----------------------------------------------------
         result = subprocess.run(
-            ["python3", str(exec_path)],
+            ["python3", archive_path],
             cwd=str(sandbox),
             capture_output=True,
             text=True,
@@ -452,3 +452,5 @@ def execute_python_in_sandbox(file_name: str, code: str) -> Dict[str, Any]:
         "archive_path": archive_path,
         "sandbox_path": sandbox_path
     }
+
+# execute_python_in_sandbox("decode_base64.py", 'import base64\ns = "U2NyYXBlIDxhIGhyZWY9Ii9kZW1vLXNjcmFwZS1kYXRhP2VtYWlsPSRFTUFJTCI+L2RlbW8tc2NyYXBlLWRhdGE/ZW1haWw9JEVNQUlMPC9hPiAocmVsYXRpdmUgdG8gdGhpcyBwYWdlKS4KR2V0IHRoZSBzZWNyZXQgY29kZSBmcm9tIHRoaXMgcGFnZS4KUE9TVCB0aGUgc2VjcmV0IGNvZGUgYmFjayB0byA8YSBocmVmPSIvc3VibWl0Ij4vc3VibWl0PC9hPgoKPHByZT4KewogICJlbWFpbCI6ICIkRU1BSUwiLAogICJzZWNyZXQiOiAieW91ciBzZWNyZXQiLAogICJ1cmwiOiAidGhpcyBwYWdlJ3MgVVJMIiwKICAiYW5zd2VyIjogInRoZSBzZWNyZXQgY29kZSB5b3Ugc2NyYXBlZCIKfQo8L3ByZT4="\nprint(base64.b64decode(s).decode())\n')
