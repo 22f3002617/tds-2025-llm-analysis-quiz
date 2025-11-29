@@ -4,9 +4,8 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel
 from starlette.responses import JSONResponse
 
-from agent import LLMAgent
+from agent.simple_agent import SimpleAgent
 import config
-from llm_providers import LLMProvider, OpenAIProvider
 from middlewares import RequestIDMiddleware
 from setup_logger import setup as setup_logging
 
@@ -31,19 +30,7 @@ async def validation_exception_handler(_, exc):
 ### END APP SETUP
 
 ### STARTS Dependency Injection
-def get_llm_provider() -> LLMProvider:
-    match config.LLM_PROVIDER:
-        case "openai":
-            return OpenAIProvider(model=config.OPENAI_MODEL,
-                                  api_key=config.OPENAI_API_KEY,
-                                  base_url=config.OPENAI_BASE_URL)
-        case _:
-            raise ValueError("Invalid LLM_PROVIDER")
-
-
-def get_llm_agent(llm_provider: LLMProvider = Depends(get_llm_provider)) -> LLMAgent:
-    raise NotImplementedError("LLMAgent dependency is not implemented yet")
-
+agent = SimpleAgent(config.SYSTEM_PROMPT_RESPONSE_ID)
 
 ### END Dependency Injection
 
@@ -61,6 +48,7 @@ def solve_quiz(quiz: QuizRequest):
     # Placeholder for quiz processing logic
     logger.info(f"Start processing quiz from URL: {quiz.url} - ")
     ## TODO: will add the llm agent logic here
+    agent.run(quiz_url=quiz.url, message="solve the quiz from scraped content")
     # This is a synchronous placeholder function
     logger.info(f"Finished processing quiz from URL: {quiz.url}")
 
