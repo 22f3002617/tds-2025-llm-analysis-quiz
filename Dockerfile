@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM python:3.13
 LABEL authors="22f3002671@ds.study.iitm.ac.in"
 
 WORKDIR /tds-2025-llm-analysis-quiz
